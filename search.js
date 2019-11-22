@@ -1,31 +1,28 @@
 module.exports = function (RED) {
 
-    var elasticsearch = require('elasticsearch');
-
     function Search(config) {
-        RED.nodes.createNode(this, config);
-        this.server = RED.nodes.getNode(config.server);
         var node = this;
-        this.on('input', function (msg) {
 
-            var client = new elasticsearch.Client({
-                hosts: node.server.host.split(' '),
-                timeout: node.server.timeout,
-                requestTimeout: node.server.reqtimeout
-            });
+        RED.nodes.createNode(node, config);
+
+        const serverConfig = RED.nodes.getNode(config.server);
+        if (!serverConfig.client) {
+            node.status({ fill: "red", shape: "ring", text: "Disconnected" });
+        } else {
+            node.status({ fill: "green", shape: "dot", text: "Connected" });
+        }
+
+        node.on('input', function (msg, send, done) {
+
             var documentIndex = config.documentIndex;
-            var documentType = config.documentType;
-            var query = config.query;
-            var maxResults = config.maxResults;
-            var sort = config.sort;
-            var includeFields = config.includeFields;
+            var query = config.query || "*";
+            var maxResults = config.maxResults || 10;
+            var sort = config.sort || {};
+            var includeFields = config.includeFields || [];
 
             // check for overriding message properties
             if (msg.hasOwnProperty("documentIndex")) {
                 documentIndex = msg.documentIndex;
-            }
-            if (msg.hasOwnProperty("documentType")) {
-                documentType = msg.documentType;
             }
             if (msg.hasOwnProperty("query")) {
                 query = msg.query;
@@ -45,17 +42,13 @@ module.exports = function (RED) {
             }
 
             // construct the search params
-            var params = {
+            const params = {
                 size: maxResults,
                 sort: sort,
-                _sourceInclude: includeFields
+                _source_includes: includeFields
             };
             if (documentIndex !== '')
                 params.index = documentIndex;
-            if (documentType !== '')
-                params.type = documentType;
-
-
 
             if (msg.hasOwnProperty("body")) {
                 params.body = msg.body;
@@ -68,15 +61,18 @@ module.exports = function (RED) {
                     }
                 };
             }
-            
-            client.search(params).then(function (resp) {
-                msg.payload = resp.hits;
-                node.send(msg);
-            }, function (err) {
-                node.error(err);
-            });
+
+            serverConfig.client.search(params)
+                .then(function (resp) {
+                    msg.payload = resp.body.hits;
+                    send(msg);
+                    done();
+                }, function (err) {
+                    done(err);
+                });
 
         });
     }
+
     RED.nodes.registerType("es-search", Search);
 };

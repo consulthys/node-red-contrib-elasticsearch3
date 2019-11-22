@@ -1,48 +1,47 @@
-module.exports = function(RED) {
+module.exports = function (RED) {
 
-  var elasticsearch = require('elasticsearch');
+    function Delete(config) {
+        var node = this;
 
-  function Delete(config) {
-    RED.nodes.createNode(this,config);
-    this.server = RED.nodes.getNode(config.server);
-    var node = this;
-    this.on('input', function(msg) {
+        RED.nodes.createNode(node, config);
 
-      var client = new elasticsearch.Client({
-          hosts: node.server.host.split(' '),
-          timeout: node.server.timeout,
-          requestTimeout: node.server.reqtimeout
-      });
-      var documentId = config.documentId;
-      var documentIndex = config.documentIndex;
-      var documentType = config.documentType;
+        const serverConfig = RED.nodes.getNode(config.server);
+        if (!serverConfig.client) {
+            node.status({ fill: "red", shape: "ring", text: "Disconnected" });
+        } else {
+            node.status({ fill: "green", shape: "dot", text: "Connected" });
+        }
 
-      // check for overriding message properties
-      if (msg.hasOwnProperty("documentId")) {
-        documentId = msg.documentId;
-      }
-      if (msg.hasOwnProperty("documentIndex")) {
-        documentIndex = msg.documentIndex;
-      }
-      if (msg.hasOwnProperty("documentType")) {
-        documentType = msg.documentType;
-      }
+        this.on('input', function (msg, send, done) {
 
-      // construct the search params
-      var params = {
-        index: documentIndex,
-        type: documentType,
-        id: documentId
-      };
+            var documentId = config.documentId;
+            var documentIndex = config.documentIndex;
 
-      client.delete(params).then(function (resp) {
-        msg.payload = resp;
-        node.send(msg);
-      }, function (err) {
-        node.error(err);
-      });
+            // check for overriding message properties
+            if (msg.hasOwnProperty("documentId")) {
+                documentId = msg.documentId;
+            }
+            if (msg.hasOwnProperty("documentIndex")) {
+                documentIndex = msg.documentIndex;
+            }
 
-    });
-  }
-  RED.nodes.registerType("es-delete",Delete);
+            // construct the search params
+            var params = {
+                index: documentIndex,
+                id: documentId
+            };
+
+            serverConfig.client.delete(params)
+                .then(function (resp) {
+                    msg.payload = resp.body;
+                    send(msg);
+                    done();
+                }, function (err) {
+                    done(err);
+                });
+
+        });
+    }
+
+    RED.nodes.registerType("es-delete", Delete);
 };
