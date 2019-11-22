@@ -1,0 +1,41 @@
+<script type="text/javascript">
+    RED.nodes.registerType('remote-server', {
+        category: 'config',
+        defaults: {
+            name: {value: '', required: true},
+            host: {value: '', required: true},
+            username: {value: '', required: false},
+            password: {value: '', required: false},
+        },
+        credentials: {
+            username: {type: "text"},
+            password: {type: "password"}
+        },
+        paletteLabel: "Elastic Search Config",
+        inputs: 0,
+        outputs: 0,
+        label: function () {
+            return this.name || 'remote server';
+        }
+    });
+</script>
+
+<script type="text/x-red" data-template-name="remote-server">
+    <div class="form-row">
+        <label for="node-config-input-name"><i class="icon-bookmark"></i> Name</label>
+        <input type="text" id="node-config-input-name">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-host"><i class="fa fa-arrows"></i> Host</label>
+        <input type="text" id="node-config-input-host" placeholder="http://localhost:9200 (spaces as separator)">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-username"><i class="fa fa-user"></i> Username</label>
+        <input type="text" id="node-config-input-username" placeholder="Username">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-password"><i class="fa fa-lock"></i> Password</label>
+        <input type="password" id="node-config-input-password" placeholder="Password">
+    </div>
+
+</script>
